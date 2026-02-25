@@ -1,65 +1,97 @@
 import streamlit as st
 import sympy as sp
 import random
+import numpy as np
+import plotly.graph_objects as go
 
-st.set_page_config(page_title="Profe de Mates: Reto Derivadas", layout="centered")
+st.set_page_config(page_title="Arquitectura y Cálculo - Profe Karina", layout="wide")
+
+# --- ENCABEZADO ---
+st.title("🏛️ Cálculo para la Arquitectura")
+st.subheader("Facultad de Arquitectura | Profe: Karina Arriola")
 
 # --- LÓGICA DEL QUIZ ---
 def generar_ejercicio():
     x = sp.symbols('x')
-    # Lista de funciones base para el quiz
-    n = random.randint(2, 5)
-    a = random.randint(1, 10)
-    funciones = [
-        a * x**n,             # Ejemplo: 5x^3
-        a * sp.sin(x),        # Ejemplo: 4sin(x)
-        x**n + a*x,           # Ejemplo: x^2 + 5x
-        sp.cos(a*x)           # Ejemplo: cos(3x)
-    ]
+    n = random.randint(2, 4)
+    a = random.randint(1, 8)
+    funciones = [a * x*n, a * sp.cos(x), x*n + a*x, sp.sin(a*x)]
     f = random.choice(funciones)
     df = sp.diff(f, x)
     return f, df
 
-# Inicializar variables de estado para que no cambien al hacer clic
 if 'ejercicio' not in st.session_state:
     st.session_state.ejercicio, st.session_state.solucion = generar_ejercicio()
 
-# --- INTERFAZ ---
-st.title("🎓 Academia de Derivadas")
-tab1, tab2 = st.tabs(["🔍 Explorador Visual", "📝 Ponte a Prueba (Quiz)"])
+# --- PESTAÑAS ---
+tab1, tab2 = st.tabs(["📐 Visualizador de Curvas", "✍️ Desafío de Derivadas"])
 
 with tab1:
-    st.header("Visualiza la Pendiente")
-    user_f = st.text_input("Escribe f(x):", "x**2", key="explorador")
-    st.info("Usa el código anterior para ver la gráfica aquí. (Mantente enfocado en el Quiz abajo)")
+    st.header("Análisis de Pendientes e Inclinación")
+    st.write("Ingresa una función para analizar la pendiente de la recta tangente.")
+    
+    user_f_text = st.text_input("Escribe tu función (ejemplo: x*2 o sin(x)):", "x*2", key="input_viz")
+    
+    try:
+        x_s = sp.symbols('x')
+        f_s = sp.sympify(user_f_text.replace("^", "**"))
+        df_s = sp.diff(f_s, x_s)
+        
+        # Mostrar fórmulas
+        st.latex(f"f(x) = {sp.latex(f_s)}")
+        st.latex(f"f'(x) = {sp.latex(df_s)}")
+        
+        # Slider para mover el punto
+        val_x = st.slider("Mueve el punto para ver la pendiente m en la curva:", -5.0, 5.0, 0.0)
+        
+        # Cálculos numéricos
+        f_n = sp.lambdify(x_s, f_s, 'numpy')
+        df_n = sp.lambdify(x_s, df_s, 'numpy')
+        
+        xs = np.linspace(-5, 5, 250)
+        ys = f_n(xs)
+        y0 = float(f_n(val_x))
+        m = float(df_n(val_x))
+        
+        # Recta tangente
+        tangente = m * (xs - val_x) + y0
+
+        # Gráfico con Plotly
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=xs, y=ys, name="Estructura (f(x))", line=dict(color='blue', width=3)))
+        fig.add_trace(go.Scatter(x=xs, y=tangente, name=f"Tangente (m={m:.2f})", line=dict(color='red', dash='dash')))
+        fig.add_trace(go.Scatter(x=[val_x], y=[y0], mode='markers', marker=dict(size=12, color='black'), name="Punto de análisis"))
+        
+        fig.update_layout(
+            xaxis_title="Eje X",
+            yaxis_title="Eje Y",
+            hovermode="x unified",
+            yaxis=dict(range=[min(ys)-2, max(ys)+2])
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+    except Exception as e:
+        st.error("Error: Asegúrate de usar '' para multiplicar. Ejemplo: 3*x*2")
 
 with tab2:
-    st.header("¿Cuánto sabes de derivadas?")
-    st.write("Calcula la derivada de la siguiente función:")
-    
-    # Mostrar el problema en LaTeX
+    st.header("¡Pon a prueba tu precisión!")
     st.latex(f"f(x) = {sp.latex(st.session_state.ejercicio)}")
     
-    respuesta_usuario = st.text_input("Escribe f'(x) aquí:", key="quiz_input")
+    rta = st.text_input("Tu respuesta para f'(x):", key="input_quiz")
     
     col1, col2 = st.columns(2)
-    
-    if col1.button("Comprobar respuesta"):
-        try:
-            # Convertir respuesta del usuario a formato matemático
-            user_df = sp.sympify(respuesta_usuario.replace("^", "**"))
-            if sp.simplify(user_df - st.session_state.solucion) == 0:
-                st.success("✨ ¡Excelente! Respuesta correcta.")
-                st.balloons()
-            else:
-                st.error(f"Casi... la respuesta correcta era: {st.session_state.solucion}")
-        except:
-            st.warning("Asegúrate de escribir la función correctamente (ej. 2*x**2)")
-
-    if col2.button("Siguiente ejercicio ➡️"):
-        st.session_state.ejercicio, st.session_state.solucion = generar_ejercicio()
-        st.rerun()
-
-st.sidebar.markdown("---")
-st.sidebar.write("👩‍🏫 *Consejo de la Profe:*")
-st.sidebar.write("Recuerda que la derivada de una constante siempre es 0 y la de $x^n$ es $nx^{n-1}$.")
+    with col1:
+        if st.button("Validar Cálculo"):
+            try:
+                user_sol = sp.sympify(rta.replace("^", "**"))
+                if sp.simplify(user_sol - st.session_state.solucion) == 0:
+                    st.success("¡Excelente! Respuesta correcta.")
+                    st.balloons()
+                else:
+                    st.error(f"La respuesta correcta era: {st.session_state.solucion}")
+            except:
+                st.warning("Usa formato matemático (ej. 2*x)")
+    with col2:
+        if st.button("Nuevo Reto ➡️"):
+            st.session_state.ejercicio, st.session_state.solucion = generar_ejercicio()
+            st.rerun()
