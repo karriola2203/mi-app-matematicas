@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="Taller UPC: Recta Tangente", layout="wide")
 
 st.title("🏛️ Taller Interactivo: Construcción de la Recta Tangente")
-st.caption("Docente: Karina Arriola | Facultad de Arquitectura UPC")
+st.caption("Arquitectura | UPC")
 
 # --- BARRA LATERAL CON LEYENDA ---
 with st.sidebar:
