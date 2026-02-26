@@ -80,62 +80,59 @@ with col1:
     else:
         st.lock_button("Paso 3 bloqueado", icon="🔒")
 
-    # PASO 4: ECUACIÓN FINAL
-    if 'check3' in locals() and check3:
-        with st.container(border=True):
-            st.markdown("**4. Ecuación de la Recta**")
-            u_eq = st.text_input("Escribe la ecuación completa:", placeholder="ej: y = 4x - 8")
+   # --- PASO 4: ECUACIÓN FINAL (CORRECCIÓN DE ERROR) ---
+if 'check3' in locals() and check3:
+    with st.container(border=True):
+        st.markdown("**4. Ecuación de la Recta**")
+        u_eq = st.text_input("Escribe la ecuación completa:", placeholder="ej: y = 4x - 8")
+        
+        # Inicializamos desbloqueo para evitar el AttributeError
+        desbloqueo = False 
+        
+        if u_eq:
+            # Convertimos a string para evitar errores de tipo
+            m_str = str(round(m_val, 1))
+            b_abs_str = str(round(abs(b_val), 1))
             
-            if u_eq:
-                m_str = f"{m_val:.1f}"
-                b_abs_str = f"{abs(b_val):.1f}"
-                if m_str in u_eq and b_abs_str in u_eq:
-                    st.success("¡Ecuación Correcta! 🚀")
-                    desbloqueo = True
-                else:
-                    st.error("Los valores no coinciden con tus pasos anteriores.")
-                    desbloqueo = False
+            if m_str in u_eq and b_abs_str in u_eq:
+                st.success("¡Ecuación Correcta! 🚀")
+                desbloqueo = True
             else:
-                desbloqueo = False
-    else:
-        desbloqueo = False
+                st.error("Los valores no coinciden con tus pasos anteriores.")
+else:
+    desbloqueo = False
 
-# --- RESULTADO, CORTES Y GRÁFICA ---
+# --- RESULTADO Y GRÁFICA (CON PROTECCIÓN DE ATRIBUTOS) ---
 with col2:
-    if desbloqueo:
-        st.subheader("📊 Resultados y Representación")
-        
-        # Cortes con los ejes coordenados
-        cx = -b_val / m_val if m_val != 0 else 0
-        cy = b_val
-        
-        st.write("📍 **Cortes de la recta con los ejes:**")
-        st.latex(f"Eje \ Y: (0, {cy:.2f}) \quad | \quad Eje \ X: ({cx:.2f}, 0)")
+    # Verificamos que 'desbloqueo' sea True y que las variables existan
+    if 'desbloqueo' in locals() and desbloqueo:
+        try:
+            st.subheader("📊 Resultados y Representación")
+            
+            cx = -b_val / m_val if m_val != 0 else 0
+            cy = b_val
+            
+            st.write("📍 **Cortes de la recta con los ejes:**")
+            st.latex(f"Eje \ Y: (0, {cy:.2f}) \quad | \quad Eje \ X: ({cx:.2f}, 0)")
 
-        # Gráfica
-        f_n = sp.lambdify(x_s, f_s, 'numpy')
-        xp = np.linspace(ux0-5, ux0+5, 400)
-        yp = f_n(xp)
-        yt = m_val * xp + b_val
+            # Gráfica con manejo de errores
+            f_n = sp.lambdify(x_s, f_s, 'numpy')
+            xp = np.linspace(ux0-5, ux0+5, 400)
+            yp = f_n(xp)
+            yt = m_val * xp + b_val
 
-        fig = go.Figure()
-        fig.add_hline(y=0, line_color="black", line_width=1.5)
-        fig.add_vline(x=0, line_color="black", line_width=1.5)
-        
-        fig.add_trace(go.Scatter(x=xp, y=yp, name="Curva f(x)", line=dict(color='#003366', width=4)))
-        fig.add_trace(go.Scatter(x=xp, y=yt, name="Recta Tangente", line=dict(color='red', dash='dash')))
-        
-        # Marcadores de puntos de corte y tangencia
-        fig.add_trace(go.Scatter(x=[ux0, 0, cx], y=[y0_val, cy, 0], mode='markers', 
-                                 marker=dict(color='orange', size=12, symbol='diamond'), 
-                                 name="Puntos Clave"))
-        
-        fig.update_layout(plot_bgcolor='white', height=550)
-        st.plotly_chart(fig, use_container_width=True)
-        st.balloons()
-        
-        # Reporte para Blackboard
-        reporte = f"""REPORTE UPC - CONSTRUCCIÓN GEOMÉTRICA
+            fig = go.Figure()
+            fig.add_hline(y=0, line_color="black")
+            fig.add_vline(x=0, line_color="black")
+            fig.add_trace(go.Scatter(x=xp, y=yp, name="Curva f(x)"))
+            fig.add_trace(go.Scatter(x=xp, y=yt, name="Tangente", line=dict(dash='dash')))
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+        except Exception as e:
+            st.error(f"Error al generar la gráfica: {e}")
+    else:
+        st.warning("⚠️ Completa los pasos de la izquierda.")
 -----------------------------------------
 Función: {u_f} en x0 = {ux0}
 1. Punto de Tangencia: ({ux0}, {y0_val:.2f})
