@@ -3,121 +3,149 @@ import sympy as sp
 import numpy as np
 import plotly.graph_objects as go
 
-# Configuración de página para Blackboard
-st.set_page_config(page_title="Taller UPC: Geometría de la Derivada", layout="wide")
+# Configuración profesional para Blackboard UPC
+st.set_page_config(page_title="Taller UPC: Desafío Geométrico", layout="wide")
 
-st.title("🏛️ Taller Interactivo: Análisis de la Recta Tangente")
+st.title("🏛️ Taller Interactivo: Construcción de la Recta Tangente")
 st.caption("Docente: Karina Arriola | Facultad de Arquitectura UPC")
 
-# --- BARRA LATERAL: EDITOR CON VISTA PREVIA LATEX ---
+# --- BARRA LATERAL (ENTRADA Y PREVIEW) ---
 with st.sidebar:
-    st.header("✍️ Configuración del Ejercicio")
-    u_input = st.text_input("1. Define tu función f(x):", value="x^2 - 4")
-    ux0 = st.number_input("2. Punto de tangencia (x0):", value=2.0)
+    st.header("✍️ Editor de Función")
+    u_f = st.text_input("Define f(x):", "x**2 - 4")
+    ux0 = st.number_input("Punto de análisis x0:", value=2.0)
     
-    # Procesamiento y Vista Previa
-    x = sp.symbols('x')
+    x_s = sp.symbols('x')
     try:
-        f_expr = sp.sympify(u_input.replace("^", "**"))
+        f_s = sp.sympify(u_f.replace("^", "**"))
         st.markdown("---")
-        st.write("**Vista Previa Matemática:**")
-        st.latex(sp.latex(f_expr))
+        st.write("**Vista Previa Matemática (LaTeX):**")
+        st.latex(sp.latex(f_s))
     except:
-        st.error("Error en la escritura. Revisa los símbolos.")
+        st.error("Error en la función")
         st.stop()
     
     st.markdown("---")
-    ver_ayuda = st.checkbox("🆘 Ver ayuda/procedimiento")
+    ayuda = st.toggle("Activar modo Tutor (Pistas)")
 
-# --- LÓGICA DE CÁLCULO (INTERNA) ---
-df_expr = sp.diff(f_expr, x)
-y0_val = float(f_expr.subs(x, ux0))
-m_val = float(df_expr.subs(x, ux0))
+# --- LÓGICA DE CÁLCULO INTERNO ---
+y0_val = float(f_s.subs(x_s, ux0))
+df_s = sp.diff(f_s, x_s)
+m_val = float(df_s.subs(x_s, ux0))
 b_val = y0_val - (m_val * ux0)
 
-# --- CUERPO PRINCIPAL: INTERACCIÓN ---
-col_taller, col_viz = st.columns([1.2, 1.8])
+# --- FLUJO INTERACTIVO POR PASOS ---
+col1, col2 = st.columns([1, 1.5])
 
-with col_taller:
-    st.subheader("📝 Tu Desafío")
-    st.write(f"Para la función en $x_0 = {ux0}$, encuentra la ecuación $y = mx + b$.")
+with col1:
+    st.info("🎯 **Misión:** Reemplaza los datos en $y = mx + b$ para hallar la recta.")
     
-    # PASO 1: Pendiente
-    st.markdown("---")
-    st.write("**Paso 1: Calcula la pendiente ($m$)**")
-    user_m = st.number_input("Ingresa el valor de m:", format="%.2f", key="m_input")
-    
-    if ver_ayuda:
-        st.info(f"Ayuda: Deriva la función e intenta sustituir $x$ por ${ux0}$.")
-        st.latex(f"f'(x) = {sp.latex(df_expr)}")
-    
-    # PASO 2: Ordenada b
-    st.markdown("---")
-    st.write("**Paso 2: Calcula la ordenada al origen ($b$)**")
-    st.caption("Fórmula: $b = y_0 - (m \cdot x_0)$")
-    user_b = st.number_input("Ingresa el valor de b:", format="%.2f", key="b_input")
+    # PASO 1: PUNTO Y0
+    with st.container(border=True):
+        st.markdown("**1. Hallar el Punto de Tangencia**")
+        u_y0 = st.number_input(f"Calcula $y_0$ evaluando $f({ux0})$:", format="%.2f", key="y0_user")
+        check1 = abs(u_y0 - y0_val) < 0.05
+        if check1: 
+            st.success(f"Punto Hallado: $P({ux0}, {y0_val:.2f})$ ✅")
+        elif ayuda: 
+            st.caption("Pista: Sustituye el valor de x en la función original.")
 
-    if ver_ayuda:
-        st.info(f"Punto de tangencia: $P({ux0}, {y0_val:.2f})$")
-        st.latex(f"b = {y0_val:.2f} - ({m_val:.2f} \cdot {ux0})")
+    # PASO 2: PENDIENTE M
+    if check1:
+        with st.container(border=True):
+            st.markdown("**2. Hallar la Pendiente (m)**")
+            u_m = st.number_input("Calcula $m = f'(x_0)$:", format="%.2f", key="m_user")
+            check2 = abs(u_m - m_val) < 0.05
+            if check2: 
+                st.success(f"Pendiente Hallada: $m = {m_val:.2f}$ ✅")
+            elif ayuda: 
+                st.latex(f"f'(x) = {sp.latex(df_s)}")
+                st.caption("Deriva y reemplaza x por el valor de x0.")
+    else:
+        st.lock_button("Paso 2 bloqueado", icon="🔒")
 
-    # VALIDACIÓN
-    if st.button("🚀 Validar mi Recta Tangente"):
-        error_m = abs(user_m - m_val)
-        error_b = abs(user_b - b_val)
+    # PASO 3: HALLAR B POR REEMPLAZO EN Y=MX+B
+    if 'check2' in locals() and check2:
+        with st.container(border=True):
+            st.markdown("**3. Hallar el valor de b**")
+            st.write("Sustituye los valores conocidos en $y = mx + b$:")
+            st.latex(f"{y0_val:.2f} = ({m_val:.2f})({ux0}) + b")
+            
+            u_b = st.number_input("Despeja e ingresa el valor de b:", format="%.2f", key="b_user")
+            check3 = abs(u_b - b_val) < 0.05
+            if check3: 
+                st.success(f"Valor Hallado: $b = {b_val:.2f}$ ✅")
+            elif ayuda:
+                st.info(f"Despeje: $b = {y0_val:.2f} - ({m_val*ux0:.2f})$")
+    else:
+        st.lock_button("Paso 3 bloqueado", icon="🔒")
+
+    # PASO 4: ECUACIÓN FINAL
+    if 'check3' in locals() and check3:
+        with st.container(border=True):
+            st.markdown("**4. Ecuación de la Recta**")
+            u_eq = st.text_input("Escribe la ecuación completa:", placeholder="ej: y = 4x - 8")
+            
+            if u_eq:
+                m_str = f"{m_val:.1f}"
+                b_abs_str = f"{abs(b_val):.1f}"
+                if m_str in u_eq and b_abs_str in u_eq:
+                    st.success("¡Ecuación Correcta! 🚀")
+                    desbloqueo = True
+                else:
+                    st.error("Los valores no coinciden con tus pasos anteriores.")
+                    desbloqueo = False
+            else:
+                desbloqueo = False
+    else:
+        desbloqueo = False
+
+# --- RESULTADO, CORTES Y GRÁFICA ---
+with col2:
+    if desbloqueo:
+        st.subheader("📊 Resultados y Representación")
         
-        if error_m < 0.02 and error_b < 0.02:
-            st.success("¡Excelente! Has encontrado la recta exacta.")
-            st.balloons()
-        else:
-            if error_m >= 0.02: st.error(f"La pendiente 'm' no es correcta.")
-            if error_b >= 0.02: st.error(f"La ordenada 'b' no es correcta.")
-            st.warning("Revisa tus cálculos o activa el botón de 'Ver Ayuda'.")
+        # Cortes con los ejes coordenados
+        cx = -b_val / m_val if m_val != 0 else 0
+        cy = b_val
+        
+        st.write("📍 **Cortes de la recta con los ejes:**")
+        st.latex(f"Eje \ Y: (0, {cy:.2f}) \quad | \quad Eje \ X: ({cx:.2f}, 0)")
 
-with col_viz:
-    # Mostramos los cortes de la TANGENTE
-    st.subheader("📍 Análisis de Cortes (Recta)")
-    
-    # Corte Y: (0, b) | Corte X: (-b/m, 0)
-    c_y = b_val
-    c_x = -b_val / m_val if m_val != 0 else 0
-    
-    c1, c2 = st.columns(2)
-    with c1:
-        st.metric("Corte Eje Y", f"(0, {c_y:.2f})")
-    with c2:
-        st.metric("Corte Eje X", f"({c_x:.2f}, 0)" if m_val != 0 else "N/A")
+        # Gráfica
+        f_n = sp.lambdify(x_s, f_s, 'numpy')
+        xp = np.linspace(ux0-5, ux0+5, 400)
+        yp = f_n(xp)
+        yt = m_val * xp + b_val
 
-    # GRÁFICA INTERACTIVA
-    f_n = sp.lambdify(x, f_expr, 'numpy')
-    x_p = np.linspace(ux0 - 5, ux0 + 5, 400)
-    y_f = f_n(x_p)
-    y_t = m_val * x_p + b_val
+        fig = go.Figure()
+        fig.add_hline(y=0, line_color="black", line_width=1.5)
+        fig.add_vline(x=0, line_color="black", line_width=1.5)
+        
+        fig.add_trace(go.Scatter(x=xp, y=yp, name="Curva f(x)", line=dict(color='#003366', width=4)))
+        fig.add_trace(go.Scatter(x=xp, y=yt, name="Recta Tangente", line=dict(color='red', dash='dash')))
+        
+        # Marcadores de puntos de corte y tangencia
+        fig.add_trace(go.Scatter(x=[ux0, 0, cx], y=[y0_val, cy, 0], mode='markers', 
+                                 marker=dict(color='orange', size=12, symbol='diamond'), 
+                                 name="Puntos Clave"))
+        
+        fig.update_layout(plot_bgcolor='white', height=550)
+        st.plotly_chart(fig, use_container_width=True)
+        st.balloons()
+        
+        # Reporte para Blackboard
+        reporte = f"""REPORTE UPC - CONSTRUCCIÓN GEOMÉTRICA
+-----------------------------------------
+Función: {u_f} en x0 = {ux0}
+1. Punto de Tangencia: ({ux0}, {y0_val:.2f})
+2. Pendiente (m): {m_val:.2f}
+3. Ordenada (b): {b_val:.2f}
+4. Ecuación Final: y = {m_val:.2f}x + ({b_val:.2f})
+5. Cortes: Eje X en ({cx:.2f}, 0) | Eje Y en (0, {cy:.2f})
+-----------------------------------------"""
+        st.text_area("Copia este desarrollo para el Foro de Blackboard:", reporte, height=180)
 
-    fig = go.Figure()
-    # Ejes
-    fig.add_hline(y=0, line_color="black")
-    fig.add_vline(x=0, line_color="black")
-    # Curvas
-    fig.add_trace(go.Scatter(x=x_p, y=y_f, name="Función f(x)", line=dict(color='#003366', width=3)))
-    fig.add_trace(go.Scatter(x=x_p, y=y_t, name="Recta Tangente", line=dict(color='#FF4B4B', dash='dash')))
-    # Cortes
-    fig.add_trace(go.Scatter(x=[0, c_x], y=[c_y, 0], mode='markers', 
-                             marker=dict(color='green', size=12, symbol='x'), name="Cortes Tangente"))
-    
-    fig.update_layout(height=450, plot_bgcolor='white', title="Visualización Geométrica")
-    st.plotly_chart(fig, use_container_width=True)
-
-# --- REPORTE PARA BLACKBOARD ---
-st.markdown("---")
-if st.checkbox("Generar Reporte para Foro"):
-    st.subheader("📋 Datos para tu participación")
-    reporte = f"""ANÁLISIS GEOMÉTRICO UPC
-Función: f(x) = {u_input} en x0 = {ux0}
-----------------------------------------
-Ecuación Tangente: y = {m_val:.2f}x {'+' if b_val>=0 else ''} {b_val:.2f}
-Corte Y: (0, {c_y:.2f})
-Corte X: ({c_x:.2f}, 0)
-----------------------------------------
-"""
-    st.text_area("Copia y pega esto en Blackboard:", reporte, height=150)
+    else:
+        st.warning("⚠️ Completa los 4 pasos de la izquierda para ver el análisis técnico.")
+        st.image("https://via.placeholder.com/800x500.png?text=Completa+el+despeje+de+b+y+la+ecuación", use_container_width=True)
